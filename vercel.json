@@ -7,10 +7,10 @@
       "use": "@vercel/static"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/",
-      "dest": "/nigeria_map copy.html"
+      "source": "/",
+      "destination": "/nigeria_map copy.html"
     }
   ],
   "headers": [
