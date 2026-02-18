@@ -1,12 +1,6 @@
 {
   "version": 2,
   "name": "nigeria-incident-map",
-  "builds": [
-    {
-      "src": "nigeria_map copy.html",
-      "use": "@vercel/static"
-    }
-  ],
   "rewrites": [
     {
       "source": "/",
