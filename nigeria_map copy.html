@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nigeria Map </title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --navy:#0d1b2e;
+    --navy2:#12243c;
+    --navy3:#1a3052;
+    --accent:#3a7bd5;
+    --gold:#f5a623;
+    --light:#e8eef4;
+    --text:#c9d8e8;
+  }
+  body{font-family:'Barlow',sans-serif;background:var(--navy);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  
+  /* HEADER */
+  #header{background:var(--navy);border-bottom:2px solid var(--navy3);padding:0 16px;height:44px;display:flex;align-items:center;gap:16px;z-index:1000;flex-shrink:0}
+  #header h1{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:2px;color:#fff;text-transform:uppercase;white-space:nowrap}
+  #header h1 span{color:var(--accent)}
+  .header-divider{width:1px;height:22px;background:var(--navy3)}
+
+  /* TOOLBAR */
+  #toolbar{background:var(--navy2);border-bottom:1px solid var(--navy3);padding:8px 12px;display:flex;align-items:center;gap:12px;z-index:999;flex-shrink:0;overflow-x:auto;white-space:nowrap}
+  #toolbar .toolbar-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;color:#8a9bb5;text-transform:uppercase;letter-spacing:1px;margin-right:4px;white-space:nowrap;flex-shrink:0}
+  #cat-pills{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;white-space:nowrap}
+  .cat-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;border:1.5px solid transparent;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.5px;transition:all .15s;white-space:nowrap;background:transparent;color:#8a9bb5}
+  .cat-pill .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .cat-pill.active{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff}
+  .cat-pill:hover:not(.active){background:rgba(255,255,255,.05);color:#cdd}
+  .toolbar-sep{width:1px;height:18px;background:var(--navy3);flex-shrink:0}
+  
+  /* MAP CONTAINER */
+  #map-wrap{flex:1;position:relative;overflow:hidden}
+  #map{width:100%;height:100%;background:#c8dce8}
+  .leaflet-attribution-flag,.leaflet-control-attribution{display:none!important}
+  .leaflet-control-zoom{margin:10px!important}
+  .leaflet-control-zoom a{background:var(--navy2)!important;color:var(--text)!important;border-color:var(--navy3)!important;font-size:16px!important;line-height:24px!important;width:26px!important;height:26px!important}
+  .leaflet-control-zoom a:hover{background:var(--navy3)!important}
+
+  /* STATE TOOLTIP */
+  .leaflet-tooltip{background:var(--navy)!important;border:1px solid var(--navy3)!important;color:var(--text)!important;font-family:'Barlow Condensed',sans-serif!important;font-size:10px!important;padding:2px 5px!important;white-space:nowrap;box-shadow:none!important}
+  .leaflet-tooltip::before{display:none!important}
+
+  /* STATE LABELS */
+  .state-label{background:transparent!important;border:none!important;box-shadow:none!important;font-family:'Barlow Condensed',sans-serif!important;font-size:8px!important;font-weight:600!important;color:#5a4a2a!important;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;pointer-events:none!important}
+  .state-label::before{display:none!important}
+
+  /* INCIDENT TOOLTIP */
+  .incident-tip{background:var(--navy)!important;border:1px solid var(--navy3)!important;color:#cdd!important;font-family:'Barlow',sans-serif!important;font-size:11px!important;padding:7px 10px!important;min-width:140px}
+  .incident-tip .tip-cat{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:2px}
+  .incident-tip .tip-row{font-size:10px;color:#8a9bb5;margin-top:1px}
+
+  /* CONTEXT MENU */
+  #ctx-menu{position:fixed;background:var(--navy2);border:1px solid var(--navy3);border-radius:4px;z-index:9999;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.5);display:none}
+  #ctx-menu .ctx-item{padding:7px 14px;font-size:12px;font-family:'Barlow',sans-serif;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:8px}
+  #ctx-menu .ctx-item:hover{background:var(--navy3);color:#fff}
+  #ctx-menu .ctx-item.danger{color:#e63946}
+  #ctx-menu .ctx-item.danger:hover{background:#2a1015}
+  #ctx-menu hr{border:none;border-top:1px solid var(--navy3);margin:2px 0}
+
+  /* NOTE POPUP */
+  #note-popup{position:fixed;background:var(--navy2);border:1px solid var(--navy3);border-radius:6px;z-index:9999;padding:12px;width:240px;box-shadow:0 6px 24px rgba(0,0,0,.6);display:none}
+  #note-popup h4{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:8px}
+  #note-popup textarea{width:100%;background:var(--navy);border:1px solid var(--navy3);color:var(--text);font-family:'Barlow',sans-serif;font-size:11px;border-radius:4px;padding:6px;resize:vertical;min-height:60px;outline:none}
+  #note-popup textarea:focus{border-color:var(--accent)}
+  #note-popup .popup-btns{display:flex;gap:6px;margin-top:8px;justify-content:flex-end}
+  #note-popup button{padding:4px 12px;border:none;border-radius:3px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+  #note-popup .btn-save{background:var(--accent);color:#fff}
+  #note-popup .btn-cancel{background:var(--navy3);color:var(--text)}
+
+  /* LEGEND BAR */
+  #legend{background:var(--navy);border-top:2px solid var(--navy3);padding:0 12px;height:46px;display:flex;align-items:center;gap:0;z-index:1000;flex-shrink:0;overflow-x:auto;overflow-y:hidden}
+  #legend::-webkit-scrollbar{height:3px}
+  #legend::-webkit-scrollbar-track{background:var(--navy)}
+  #legend::-webkit-scrollbar-thumb{background:var(--navy3);border-radius:2px}
+  .legend-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1.5px;margin-right:10px;white-space:nowrap;flex-shrink:0}
+  .legend-item{display:flex;align-items:center;gap:4px;padding:3px 7px;border-radius:3px;position:relative;cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .legend-item:hover{background:rgba(255,255,255,.05)}
+  .legend-icon{width:14px;height:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;position:relative}
+  .legend-icon input[type=color]{position:absolute;opacity:0;width:0;height:0}
+  .legend-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;color:#8a9bb5;text-transform:uppercase;letter-spacing:.8px;cursor:text;outline:none;min-width:10px}
+  .legend-label:focus{color:#fff;border-bottom:1px dashed var(--accent)}
+  .legend-delete{position:absolute;top:-5px;right:-3px;width:13px;height:13px;background:#e63946;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:8px;color:#fff;cursor:pointer;z-index:2}
+  .legend-item:hover .legend-delete{display:flex}
+  .legend-item.locked .legend-delete{display:none!important}
+  .legend-sep{width:1px;height:24px;background:var(--navy3);flex-shrink:0;margin:0 3px}
+  #legend-add{padding:4px 8px;background:rgba(58,123,213,.2);border:1px solid rgba(58,123,213,.4);border-radius:3px;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;margin-left:6px}
+  #legend-add:hover{background:rgba(58,123,213,.35)}
+
+  /* ENI logo in markers */
+  .eni-marker-img{width:22px;height:auto;filter:drop-shadow(0 0 2px rgba(0,0,0,.3))}
+
+  /* SIDE PANEL */
+  #panel-toggle{position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:900;background:var(--navy2);border:1px solid var(--navy3);border-right:none;border-radius:4px 0 0 4px;padding:8px 4px;cursor:pointer;writing-mode:vertical-rl;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;color:#8a9bb5;text-transform:uppercase;transition:all .2s}
+  #panel-toggle:hover{color:#fff;background:var(--navy3)}
+  #side-panel{position:absolute;right:-280px;top:0;bottom:0;width:280px;background:var(--navy2);border-left:1px solid var(--navy3);z-index:800;transition:right .25s;display:flex;flex-direction:column}
+  #side-panel.open{right:0}
+  .panel-head{padding:10px 12px;border-bottom:1px solid var(--navy3);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .panel-head h3{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px}
+  .panel-filter{padding:8px;border-bottom:1px solid var(--navy3);flex-shrink:0}
+  .panel-filter select{width:100%;background:var(--navy);border:1px solid var(--navy3);color:var(--text);font-family:'Barlow',sans-serif;font-size:11px;padding:4px 6px;border-radius:3px;outline:none}
+  #incident-list{flex:1;overflow-y:auto;padding:4px 0}
+  #incident-list::-webkit-scrollbar{width:4px}
+  #incident-list::-webkit-scrollbar-track{background:var(--navy)}
+  #incident-list::-webkit-scrollbar-thumb{background:var(--navy3)}
+  .incident-row{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;display:flex;align-items:flex-start;gap:7px}
+  .incident-row:hover{background:rgba(255,255,255,.04)}
+  .incident-row .ir-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+  .incident-row .ir-info{flex:1;min-width:0}
+  .incident-row .ir-cat{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#fff;text-transform:uppercase}
+  .incident-row .ir-meta{font-size:10px;color:#6a7a8a;margin-top:1px}
+  .incident-row .ir-note{font-size:10px;color:#8a9bb5;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .panel-footer{padding:8px;border-top:1px solid var(--navy3);flex-shrink:0}
+  .panel-footer button{width:100%;padding:6px;background:rgba(58,123,213,.2);border:1px solid rgba(58,123,213,.4);border-radius:3px;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.5px}
+  .panel-footer button:hover{background:rgba(58,123,213,.35)}
+
+  /* COUNTRY LABELS */
+  .country-label{background:transparent!important;border:none!important;box-shadow:none!important;font-family:'Barlow Condensed',sans-serif!important;font-size:11px!important;font-weight:600!important;color:#7a8fa0!important;text-transform:uppercase;letter-spacing:1.5px;pointer-events:none!important;white-space:nowrap}
+  .country-label::before{display:none!important}
+  .gulf-label{position:absolute;bottom:55px;left:40px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:#6a8fa8;text-transform:uppercase;letter-spacing:2px;pointer-events:none;z-index:400;text-shadow:1px 1px 0 rgba(255,255,255,.2)}
+
+  /* ICON PICKER DROPDOWN */
+  .icon-picker-dropdown{position:absolute;bottom:40px;left:0;background:var(--navy2);border:1px solid var(--navy3);border-radius:4px;z-index:9999;padding:6px;display:none;grid-template-columns:repeat(4,28px);gap:4px;min-width:130px}
+  .icon-picker-dropdown.open{display:grid}
+  .icon-opt{width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:3px;font-size:13px}
+  .icon-opt:hover{background:var(--navy3)}
+
+  /* Highlighted marker */
+  .highlighted-marker{filter:drop-shadow(0 0 6px gold)!important}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <h1>NIGERIA <span>INCIDENT</span> MAP</h1>
+  <div class="header-divider"></div>
+  <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;color:#8a9bb5;letter-spacing:.5px"></span>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="toolbar-label">Active Mode:</span>
+  <div id="cat-pills"></div>
+  <div class="toolbar-sep"></div>
+  <span class="cat-pill" id="mode-none" onclick="setActiveMode(null)" style="border-color:#3a5060;color:#8a9bb5">✕ None</span>
+</div>
+
+<!-- MAP -->
+<div id="map-wrap">
+  <div id="map"></div>
+  <div class="gulf-label">GULF OF GUINEA</div>
+  <div id="panel-toggle" onclick="togglePanel()">INCIDENT LOG</div>
+  <div id="side-panel">
+    <div class="panel-head">
+      <h3>Incident Log</h3>
+      <span style="font-size:11px;color:#8a9bb5;cursor:pointer" onclick="togglePanel()">CLOSE ×</span>
+    </div>
+    <div class="panel-filter">
+      <select id="panel-filter-select" onchange="renderIncidentList()">
+        <option value="">All Categories</option>
+      </select>
+    </div>
+    <div id="incident-list"></div>
+    <div class="panel-footer">
+      <button onclick="exportCSV()">⬇ Export CSV</button>
+      <button onclick="exportSVG()" style="margin-top:6px;background:rgba(58,123,213,.2);border-color:rgba(58,123,213,.4);color:#3a7bd5">📄 Export SVG</button>
+      <button onclick="clearAllIncidents()" style="margin-top:6px;background:rgba(230,57,70,.2);border-color:rgba(230,57,70,.4);color:#e63946">🗑 Clear All Incidents</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEGEND BAR -->
+<div id="legend">
+  <span class="legend-title">Map Legend:</span>
+  <div id="legend-items" style="display:flex;align-items:center;gap:0"></div>
+  <div class="legend-sep"></div>
+  <button id="legend-add" onclick="addCustomCategory()">+ Add</button>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctx-menu">
+  <div class="ctx-item" onclick="ctxEditNote()">✏ Edit Note</div>
+  <div class="ctx-item" onclick="ctxChangeCategory()">⇄ Change Category</div>
+  <hr>
+  <div class="ctx-item danger" onclick="ctxDelete()">✕ Delete Marker</div>
+</div>
+
+<!-- NOTE POPUP -->
+<div id="note-popup">
+  <h4>Edit Note</h4>
+  <textarea id="note-text" placeholder="Add a short description..."></textarea>
+  <div class="popup-btns">
+    <button class="btn-cancel" onclick="closeNotePopup()">Cancel</button>
+    <button class="btn-save" onclick="saveNote()">Save</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ENI LOGO BASE64
+// ============================================================
+const ENI_LOGO_BASE64 = 'data:image/jpeg;base64,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';
+
+// ============================================================
+// CATEGORIES (default)
+// ============================================================
+let categories = [
+  {id:'eni',name:'ENI SITES',color:'#f5a623',icon:'eni',locked:true},
+  {id:'crime',name:'CRIME',color:'#f5c518',icon:'circle',locked:false},
+  {id:'terrorism',name:'TERRORISM',color:'#e63946',icon:'circle',locked:false},
+  {id:'unrest',name:'SOCIAL UNREST',color:'#56b4e9',icon:'circle-outline',locked:false},
+  {id:'activism',name:'ACTIVISM',color:'#2dc653',icon:'circle',locked:false},
+  {id:'capital',name:'CAPITAL',color:'#e63946',icon:'square',locked:true},
+  {id:'harbour',name:'HARBOUR',color:'#1a3a5c',icon:'anchor',locked:false},
+  {id:'airport',name:'AIRPORT',color:'#1a3a5c',icon:'plane',locked:false}
+];
+
+let incidents = [];
+let activeMode = null;
+let ctxMarker = null;
+let highlightedMarker = null;
+let map, eniLayerGroup, incidentLayerGroup, infraLayerGroup;
+let stateData = null;
+let panelOpen = false;
+
+// ============================================================
+// ICON HELPERS
+// ============================================================
+function makeSVGCircle(color){
+  return `<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4.5" fill="${color}"/></svg>`;
+}
+function makeSVGCircleOutline(color){
+  return `<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="${color}" fill-opacity=".35" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+function makeSVGSquare(color){
+  return `<svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" fill="${color}"/></svg>`;
+}
+function makeSVGTriangle(color){
+  return `<svg width="10" height="10" viewBox="0 0 10 10"><polygon points="5,1 9,9 1,9" fill="${color}"/></svg>`;
+}
+function makeSVGStar(color){
+  return `<svg width="12" height="12" viewBox="0 0 12 12"><polygon points="6,1 7.5,4.5 11,4.5 8.5,7 9.5,11 6,9 2.5,11 3.5,7 1,4.5 4.5,4.5" fill="${color}"/></svg>`;
+}
+function makeSVGAnchor(color){
+  return `<svg width="13" height="13" viewBox="0 0 13 13" fill="${color}"><circle cx="6.5" cy="2.5" r="1.5" fill="none" stroke="${color}" stroke-width="1.5"/><line x1="6.5" y1="4" x2="6.5" y2="11" stroke="${color}" stroke-width="1.5"/><path d="M3,7 C3,10 4.5,11 6.5,11 C8.5,11 10,10 10,7" stroke="${color}" stroke-width="1.5" fill="none"/><line x1="3" y1="5.5" x2="10" y2="5.5" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+function makeSVGPlane(color){
+  return `<svg width="13" height="13" viewBox="0 0 13 13" fill="${color}"><path d="M6.5,1 L9,5.5 L12,6 L9,7 L10,11.5 L6.5,9.5 L3,11.5 L4,7 L1,6 L4,5.5 Z" fill="${color}"/></svg>`;
+}
+function makeSVGFlag(color){
+  return `<svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="1" x2="2" y2="11" stroke="${color}" stroke-width="1.5"/><polygon points="2,1 10,3.5 2,6" fill="${color}"/></svg>`;
+}
+function makeIconSVG(iconType, color, size=10){
+  if(iconType==='circle') return makeSVGCircle(color);
+  if(iconType==='circle-outline') return makeSVGCircleOutline(color);
+  if(iconType==='square') return makeSVGSquare(color);
+  if(iconType==='triangle') return makeSVGTriangle(color);
+  if(iconType==='star') return makeSVGStar(color);
+  if(iconType==='anchor') return makeSVGAnchor(color);
+  if(iconType==='plane') return makeSVGPlane(color);
+  if(iconType==='flag') return makeSVGFlag(color);
+  return makeSVGCircle(color);
+}
+
+// ============================================================
+// LEAFLET ICON FACTORIES
+// ============================================================
+function makeDivIcon(cat, size=12){
+  if(cat.icon==='eni'){
+    return L.divIcon({
+      html:`<img src="images/eni-logo.png" style="width:22px;height:auto;opacity:.9">`,
+      iconSize:[22,16],iconAnchor:[11,8],
+      className:'',popupAnchor:[0,-10]
+    });
+  }
+  const svg = makeIconSVG(cat.icon, cat.color, size);
+  return L.divIcon({
+    html:`<div style="display:flex;align-items:center;justify-content:center">${svg}</div>`,
+    iconSize:[14,14],iconAnchor:[7,7],
+    className:'',popupAnchor:[0,-8]
+  });
+}
+
+function makeInfraIcon(type, color){
+  const svg = makeIconSVG(type, color);
+  return L.divIcon({
+    html:`<div style="display:flex;align-items:center;justify-content:center">${svg}</div>`,
+    iconSize:[14,14],iconAnchor:[7,7],className:'',popupAnchor:[0,-8]
+  });
+}
+
+function makeCityIcon(){
+  return L.divIcon({
+    html:`<svg width="6" height="6"><circle cx="3" cy="3" r="2.5" fill="none" stroke="#5a4a2a" stroke-width="1.2"/></svg>`,
+    iconSize:[6,6],iconAnchor:[3,3],className:''
+  });
+}
+
+function makeCapitalIcon(){
+  return L.divIcon({
+    html:`<svg width="10" height="10"><rect x="1" y="1" width="8" height="8" fill="#e63946"/></svg>`,
+    iconSize:[10,10],iconAnchor:[5,5],className:''
+  });
+}
+
+// ============================================================
+// MAP INIT
+// ============================================================
+function initMap(){
+  map = L.map('map',{
+    zoomControl:true,
+    scrollWheelZoom:true,
+    minZoom:5,maxZoom:10,
+    zoomSnap:0.5
+  });
+  map.setView([9.0,8.0],6);
+  // Ocean background via CSS — no tile layer
+
+  const sw = L.latLng(2.5, 2.0);
+  const ne = L.latLng(15.5, 16.5);
+  map.setMaxBounds(L.latLngBounds(sw,ne));
+
+  eniLayerGroup = L.layerGroup().addTo(map);
+  infraLayerGroup = L.layerGroup().addTo(map);
+  incidentLayerGroup = L.layerGroup().addTo(map);
+
+  loadNigeriaGeoJSON();
+  addCountryLabels();
+
+  map.on('click', onMapClick);
+  document.addEventListener('click', closeContextMenu);
+  document.addEventListener('contextmenu', e=>e.preventDefault());
+}
+
+// ============================================================
+// GEOJSON
+// ============================================================
+function loadNigeriaGeoJSON(){
+  fetch('data/nigeria-states.geojson')
+    .then(r=>r.json())
+    .then(geojson=>{
+      stateData = geojson;
+      L.geoJSON(geojson,{
+        style:{fillColor:'#f5e6c8',weight:1,color:'#8a7a60',fillOpacity:1},
+        onEachFeature:(feature,layer)=>{
+          const name = feature.properties.shapeName || feature.properties.NAME_1 || feature.properties.statename || 'State';
+          layer.on('mouseover',function(){
+            this.setStyle({fillColor:'#e8d4a8'});
+            this.bindTooltip(name,{sticky:true,className:'leaflet-tooltip'}).openTooltip();
+          });
+          layer.on('mouseout',function(){
+            this.setStyle({fillColor:'#f5e6c8'});
+            this.closeTooltip();
+          });
+          // State label
+          if(feature.geometry){
+            try{
+              const center = layer.getBounds().getCenter();
+              const label = name==='Federal Capital Territory'?'F.C.T.':name;
+              L.tooltip({permanent:true,direction:'center',className:'state-label',interactive:false})
+                .setContent(`<span>${label}</span>`)
+                .setLatLng(center)
+                .addTo(map);
+            }catch(e){}
+          }
+        }
+      }).addTo(map);
+      addENISites();
+      addInfraMarkers();
+      loadFromStorage();
+    }).catch(err=>{
+      console.error('GeoJSON load failed',err);
+      // Still load markers even without states
+      addENISites();
+      addInfraMarkers();
+      loadFromStorage();
+    });
+}
+
+// Minimal TopoJSON converter
+function convertTopo(topology, object){
+  function decodeArcs(arcs, topology){
+    return arcs.map(ring=>{
+      let prevX=0, prevY=0;
+      return ring.map(point=>{
+        prevX += point[0]; prevY += point[1];
+        return [
+          prevX*topology.transform.scale[0] + topology.transform.translate[0],
+          prevY*topology.transform.scale[1] + topology.transform.translate[1]
+        ];
+      });
+    });
+  }
+  function getCoords(arc, topology){
+    const idx = arc<0 ? ~arc : arc;
+    const raw = decodeArcs([topology.arcs[idx]], topology)[0];
+    return arc<0 ? raw.slice().reverse() : raw;
+  }
+  function ringToCoords(arcsRef, topology){
+    return arcsRef.flatMap(a=>getCoords(a, topology).slice(0,-1)).concat([getCoords(arcsRef[0],topology)[0]]);
+  }
+  function convert(geom){
+    if(geom.type==='Polygon'){
+      return {type:'Polygon', coordinates: geom.arcs.map(r=>ringToCoords(r,topology).map(c=>[c[0],c[1]]))};
+    } else if(geom.type==='MultiPolygon'){
+      return {type:'MultiPolygon', coordinates: geom.arcs.map(poly=>poly.map(r=>ringToCoords(r,topology).map(c=>[c[0],c[1]])))};
+    }
+  }
+  return {
+    type:'FeatureCollection',
+    features: object.geometries.map(g=>({
+      type:'Feature',
+      properties: g.properties||{},
+      geometry: convert(g)
+    }))
+  };
+}
+
+// ============================================================
+// COUNTRY LABELS
+// ============================================================
+function addCountryLabels(){
+  const labels = [
+    {name:'NIGER',lat:14.5,lng:8.0},
+    {name:'CHAD',lat:13.8,lng:13.5},
+    {name:'BENIN',lat:8.5,lng:1.8},
+    {name:'CAMEROON',lat:7.5,lng:14.8},
+    {name:'EQUATORIAL GUINEA',lat:2.8,lng:8.8}
+  ];
+  labels.forEach(l=>{
+    L.tooltip({permanent:true,direction:'center',className:'country-label',interactive:false})
+      .setContent(l.name)
+      .setLatLng([l.lat,l.lng])
+      .addTo(map);
+  });
+}
+
+// ============================================================
+// ENI SITES
+// ============================================================
+const ENI_SITES = [
+  {name:'OML 60',lat:4.85,lng:6.90},
+  {name:'OML 61',lat:5.10,lng:6.75},
+  {name:'OML 62',lat:5.45,lng:6.20},
+  {name:'OML 63',lat:5.60,lng:6.10},
+  {name:'Brass Terminal',lat:4.31,lng:6.24},
+  {name:'EA Field',lat:3.80,lng:7.60},
+  {name:'Okpai Power Plant',lat:5.82,lng:6.57}
+];
+
+function addENISites(){
+  eniLayerGroup.clearLayers();
+  ENI_SITES.forEach(site=>{
+    const icon = L.divIcon({
+      html:`<img src="images/eni-logo.png" style="width:20px;height:auto;opacity:.85;pointer-events:none">`,
+      iconSize:[20,14],iconAnchor:[10,7],className:'',popupAnchor:[0,-8]
+    });
+    const m = L.marker([site.lat,site.lng],{icon,zIndexOffset:-100,draggable:false})
+      .addTo(eniLayerGroup);
+    m.bindTooltip(`<b>${site.name}</b> — ENI Operational Site`,{className:'leaflet-tooltip',sticky:true});
+  });
+}
+
+// ============================================================
+// INFRASTRUCTURE MARKERS
+// ============================================================
+const AIRPORTS = [
+  {name:'Lagos Airport',lat:6.577,lng:3.321},
+  {name:'Kano Airport',lat:12.046,lng:8.524},
+  {name:'Sokoto Airport',lat:12.916,lng:5.207},
+  {name:'Maiduguri Airport',lat:11.855,lng:13.081},
+  {name:'Port Harcourt Airport',lat:5.016,lng:6.950},
+  {name:'Enugu Airport',lat:6.474,lng:7.562},
+  {name:'Calabar Airport',lat:4.976,lng:8.347},
+  {name:'Abuja Airport',lat:9.007,lng:7.263}
+];
+const HARBOURS = [
+  {name:'Lagos Harbour',lat:6.435,lng:3.4},
+  {name:'Warri Harbour',lat:5.52,lng:5.75},
+  {name:'Port Harcourt Harbour',lat:4.78,lng:7.01},
+  {name:'Calabar Harbour',lat:4.95,lng:8.32},
+  {name:'Sapele Harbour',lat:5.90,lng:5.68}
+];
+const CITIES = [
+  {name:'Katsina',lat:12.99,lng:7.60},{name:'Gusau',lat:12.17,lng:6.66},
+  {name:'Zaria',lat:11.08,lng:7.70},{name:'Kaduna',lat:10.52,lng:7.44},
+  {name:'Maiduguri',lat:11.83,lng:13.15},{name:'Kumo',lat:10.04,lng:11.21},
+  {name:'Ilorin',lat:8.50,lng:4.55},{name:'Ogbomosho',lat:8.13,lng:4.27},
+  {name:'Oyo',lat:7.85,lng:3.93},{name:'Ede',lat:7.73,lng:4.44},
+  {name:'Ibadan',lat:7.38,lng:3.90},{name:'Akure',lat:7.25,lng:5.19},
+  {name:'Benin City',lat:6.34,lng:5.62},{name:'Sapele',lat:5.90,lng:5.68},
+  {name:'Warri',lat:5.52,lng:5.75},{name:'Onitsha',lat:6.14,lng:6.78},
+  {name:'Lafia',lat:8.49,lng:8.52},{name:'Makurdi',lat:7.73,lng:8.52},
+  {name:'Enugu',lat:6.46,lng:7.55},{name:'Port Harcourt',lat:4.78,lng:7.01},
+  {name:'Calabar',lat:4.95,lng:8.32}
+];
+
+function addInfraMarkers(){
+  infraLayerGroup.clearLayers();
+  // Capital
+  L.marker([9.07,7.40],{icon:makeCapitalIcon(),zIndexOffset:50,draggable:false})
+    .bindTooltip('<b>ABUJA</b> — Federal Capital',{className:'leaflet-tooltip',sticky:true})
+    .addTo(infraLayerGroup);
+  L.tooltip({permanent:true,direction:'top',className:'state-label',interactive:false})
+    .setContent('ABUJA').setLatLng([9.15,7.40]).addTo(map);
+
+  AIRPORTS.forEach(a=>{
+    L.marker([a.lat,a.lng],{icon:makeInfraIcon('plane','#1a3a5c'),zIndexOffset:20,draggable:false})
+      .bindTooltip(`✈ ${a.name}`,{className:'leaflet-tooltip',sticky:true})
+      .addTo(infraLayerGroup);
+  });
+  HARBOURS.forEach(h=>{
+    L.marker([h.lat,h.lng],{icon:makeInfraIcon('anchor','#1a3a5c'),zIndexOffset:20,draggable:false})
+      .bindTooltip(`⚓ ${h.name}`,{className:'leaflet-tooltip',sticky:true})
+      .addTo(infraLayerGroup);
+  });
+  CITIES.forEach(c=>{
+    L.marker([c.lat,c.lng],{icon:makeCityIcon(),zIndexOffset:0,draggable:false})
+      .bindTooltip(c.name,{className:'leaflet-tooltip',sticky:true,direction:'top'})
+      .addTo(infraLayerGroup);
+    L.tooltip({permanent:true,direction:'top',className:'state-label',interactive:false})
+      .setContent(c.name).setLatLng([c.lat+0.1,c.lng]).addTo(map);
+  });
+}
+
+// ============================================================
+// INCIDENT PLACEMENT
+// ============================================================
+function onMapClick(e){
+  if(!activeMode) return;
+  const cat = categories.find(c=>c.id===activeMode);
+  if(!cat) return;
+  const stateName = getStateName(e.latlng.lat, e.latlng.lng);
+  const now = new Date();
+  const incident = {
+    id: Date.now(),
+    catId: cat.id,
+    lat: e.latlng.lat,
+    lng: e.latlng.lng,
+    state: stateName,
+    timestamp: now.toISOString(),
+    note:''
+  };
+  incidents.push(incident);
+  const m = createIncidentMarker(incident);
+  incident._marker = m;
+  saveToStorage();
+  renderIncidentList();
+  updatePanelFilter();
+}
+
+function createIncidentMarker(incident){
+  const cat = categories.find(c=>c.id===incident.catId)||categories[1];
+  const icon = makeDivIcon(cat);
+  const m = L.marker([incident.lat,incident.lng],{icon,draggable:true,zIndexOffset:100})
+    .addTo(incidentLayerGroup);
+  updateMarkerTooltip(m, incident);
+  m.on('contextmenu', e=>{
+    L.DomEvent.stopPropagation(e);
+    showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, incident, m);
+  });
+  m.on('dragend', ()=>{
+    const pos = m.getLatLng();
+    incident.lat = pos.lat; incident.lng = pos.lng;
+    incident.state = getStateName(pos.lat, pos.lng);
+    updateMarkerTooltip(m, incident);
+    saveToStorage(); renderIncidentList();
+  });
+  return m;
+}
+
+function updateMarkerTooltip(m, incident){
+  const cat = categories.find(c=>c.id===incident.catId)||categories[1];
+  const dt = new Date(incident.timestamp);
+  const dtStr = dt.toLocaleDateString()+' '+dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const html = `<div class="incident-tip">
+    <div class="tip-cat" style="color:${cat.color}">${cat.name}</div>
+    <div class="tip-row">📍 ${incident.state}</div>
+    <div class="tip-row">🕐 ${dtStr}</div>
+    ${incident.note?`<div class="tip-row" style="color:#aaa;margin-top:3px">${incident.note}</div>`:''}
+  </div>`;
+  m.unbindTooltip();
+  m.bindTooltip(html,{className:'incident-tip',sticky:false,interactive:false,direction:'top',offset:[0,-8]});
+}
+
+function updateAllMarkersForCategory(catId){
+  incidents.forEach(inc=>{
+    if(inc.catId===catId && inc._marker){
+      const cat = categories.find(c=>c.id===catId);
+      if(cat) inc._marker.setIcon(makeDivIcon(cat));
+      updateMarkerTooltip(inc._marker, inc);
+    }
+  });
+}
+
+// ============================================================
+// STATE DETECTION
+// ============================================================
+function getStateName(lat, lng){
+  if(!stateData) return 'Unknown';
+  const pt = [lng, lat];
+  for(const f of stateData.features){
+    if(pointInFeature(pt, f)){
+      return f.properties.shapeName || f.properties.NAME_1 || f.properties.statename || 'Unknown';
+    }
+  }
+  return 'Unknown';
+}
+function pointInFeature(pt, feature){
+  const g = feature.geometry;
+  if(g.type==='Polygon') return pointInPolygon(pt, g.coordinates);
+  if(g.type==='MultiPolygon') return g.coordinates.some(poly=>pointInPolygon(pt,poly));
+  return false;
+}
+function pointInPolygon(pt, rings){
+  const ring = rings[0];
+  let inside = false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>pt[1])!==(yj>pt[1]))&&(pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+// ============================================================
+// ACTIVE MODE
+// ============================================================
+function setActiveMode(id){
+  activeMode = id;
+  document.querySelectorAll('.cat-pill').forEach(el=>el.classList.remove('active'));
+  if(id){
+    const el = document.querySelector(`[data-catid="${id}"]`);
+    if(el) el.classList.add('active');
+  } else {
+    document.getElementById('mode-none').classList.add('active');
+  }
+  map.getContainer().style.cursor = id ? 'crosshair' : '';
+}
+
+// ============================================================
+// TOOLBAR PILLS
+// ============================================================
+function renderToolbar(){
+  const container = document.getElementById('cat-pills');
+  container.innerHTML='';
+  categories.forEach(cat=>{
+    if(cat.id==='harbour'||cat.id==='airport'||cat.id==='capital') return; // infra only
+    const pill = document.createElement('div');
+    pill.className='cat-pill';
+    pill.dataset.catid=cat.id;
+    if(cat.id==='eni'){
+      pill.innerHTML=`<img src="images/eni-logo.png" style="width:18px;height:auto"> ${cat.name}`;
+    } else {
+      const svg = makeIconSVG(cat.icon, cat.color);
+      pill.innerHTML=`<span class="dot" style="width:8px;height:8px;display:flex;align-items:center">${svg}</span> ${cat.name}`;
+    }
+    if(cat.id!=='eni') pill.onclick=()=>setActiveMode(cat.id);
+    container.appendChild(pill);
+  });
+}
+
+// ============================================================
+// LEGEND BAR
+// ============================================================
+function renderLegend(){
+  const container = document.getElementById('legend-items');
+  container.innerHTML='';
+  categories.forEach((cat,idx)=>{
+    const item = document.createElement('div');
+    item.className='legend-item'+(cat.locked?' locked':'');
+    item.dataset.catid=cat.id;
+
+    // Icon / color swatch
+    const iconWrap = document.createElement('div');
+    iconWrap.className='legend-icon';
+    if(cat.id==='eni'){
+      iconWrap.innerHTML=`<img src="images/eni-logo.png" style="width:28px;height:auto">`;
+    } else {
+      const colorInput = document.createElement('input');
+      colorInput.type='color'; colorInput.value=cat.color;
+      colorInput.addEventListener('input',e=>{
+        cat.color=e.target.value;
+        renderLegend(); renderToolbar();
+        updateAllMarkersForCategory(cat.id);
+        saveToStorage();
+      });
+      const svgEl = document.createElement('span');
+      svgEl.innerHTML=makeIconSVG(cat.icon, cat.color, 12);
+      svgEl.style.cursor='pointer';
+      svgEl.title='Click to change color';
+      svgEl.onclick=()=>colorInput.click();
+      iconWrap.appendChild(svgEl);
+      iconWrap.appendChild(colorInput);
+    }
+    item.appendChild(iconWrap);
+
+    // Label
+    const label = document.createElement('span');
+    label.className='legend-label';
+    label.contentEditable = cat.locked ? 'false' : 'true';
+    label.textContent=cat.name;
+    label.onblur=()=>{
+      cat.name=label.textContent.trim()||cat.name;
+      renderToolbar(); saveToStorage(); updatePanelFilter();
+    };
+    label.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();label.blur();}};
+    item.appendChild(label);
+
+    // Icon picker button (not for locked ENI/capital)
+    if(!cat.locked || cat.id==='capital'){
+      const pickBtn = document.createElement('span');
+      pickBtn.textContent='✏'; pickBtn.title='Change icon';
+      pickBtn.style.cssText='font-size:8px;color:#4a6080;cursor:pointer;margin-left:2px';
+      const dropdown = document.createElement('div');
+      dropdown.className='icon-picker-dropdown';
+      const icons = ['circle','circle-outline','square','triangle','star','flag','anchor','plane'];
+      icons.forEach(ic=>{
+        const opt = document.createElement('div');
+        opt.className='icon-opt';
+        opt.innerHTML=makeIconSVG(ic,cat.color,12);
+        opt.title=ic;
+        opt.onclick=()=>{
+          cat.icon=ic; dropdown.classList.remove('open');
+          renderLegend(); renderToolbar();
+          updateAllMarkersForCategory(cat.id);
+          saveToStorage();
+        };
+        dropdown.appendChild(opt);
+      });
+      pickBtn.onclick=e=>{e.stopPropagation();dropdown.classList.toggle('open');};
+      document.addEventListener('click',()=>dropdown.classList.remove('open'));
+      item.appendChild(pickBtn);
+      item.appendChild(dropdown);
+    }
+
+    // Delete button
+    if(!cat.locked){
+      const del = document.createElement('div');
+      del.className='legend-delete'; del.textContent='×'; del.title='Delete category';
+      del.onclick=e=>{
+        e.stopPropagation();
+        if(confirm(`Delete category "${cat.name}"?`)){
+          categories.splice(idx,1);
+          incidents.filter(inc=>inc.catId===cat.id).forEach(inc=>{
+            if(inc._marker) incidentLayerGroup.removeLayer(inc._marker);
+          });
+          incidents=incidents.filter(inc=>inc.catId!==cat.id);
+          renderLegend(); renderToolbar(); renderIncidentList(); saveToStorage();
+        }
+      };
+      item.appendChild(del);
+    }
+
+    container.appendChild(item);
+    // Separator between items
+    const sep = document.createElement('div');
+    sep.className='legend-sep';
+    container.appendChild(sep);
+  });
+}
+
+function addCustomCategory(){
+  const name = prompt('Category name:');
+  if(!name) return;
+  const color = '#' + Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
+  const id = 'custom_'+Date.now();
+  categories.push({id,name:name.toUpperCase(),color,icon:'circle',locked:false});
+  renderLegend(); renderToolbar(); updatePanelFilter(); saveToStorage();
+}
+
+// ============================================================
+// CONTEXT MENU
+// ============================================================
+function showContextMenu(x, y, incident, marker){
+  ctxMarker = {incident, marker};
+  const menu = document.getElementById('ctx-menu');
+  menu.style.display='block';
+  menu.style.left=x+'px';
+  menu.style.top=y+'px';
+}
+function closeContextMenu(){document.getElementById('ctx-menu').style.display='none';}
+function ctxEditNote(){
+  if(!ctxMarker) return;
+  closeContextMenu();
+  showNotePopup(ctxMarker.incident, ctxMarker.marker);
+}
+function ctxChangeCategory(){
+  if(!ctxMarker) return;
+  closeContextMenu();
+  const names = categories.filter(c=>c.id!=='eni'&&c.id!=='capital'&&c.id!=='harbour'&&c.id!=='airport').map(c=>c.name).join('\n');
+  const choice = prompt('Change to category:\n'+names);
+  if(!choice) return;
+  const cat = categories.find(c=>c.name.toLowerCase()===choice.toLowerCase());
+  if(!cat){alert('Category not found');return;}
+  ctxMarker.incident.catId=cat.id;
+  ctxMarker.marker.setIcon(makeDivIcon(cat));
+  updateMarkerTooltip(ctxMarker.marker, ctxMarker.incident);
+  saveToStorage(); renderIncidentList();
+}
+function ctxDelete(){
+  if(!ctxMarker) return;
+  closeContextMenu();
+  if(!confirm('Delete this marker?')) return;
+  incidentLayerGroup.removeLayer(ctxMarker.marker);
+  incidents = incidents.filter(i=>i!==ctxMarker.incident);
+  ctxMarker=null;
+  saveToStorage(); renderIncidentList();
+}
+
+// ============================================================
+// NOTE POPUP
+// ============================================================
+function showNotePopup(incident, marker){
+  const popup = document.getElementById('note-popup');
+  document.getElementById('note-text').value=incident.note||'';
+  popup.style.display='block';
+  popup.style.left='50%'; popup.style.top='50%';
+  popup.style.transform='translate(-50%,-50%)';
+  popup._incident=incident; popup._marker=marker;
+}
+function closeNotePopup(){document.getElementById('note-popup').style.display='none';}
+function saveNote(){
+  const popup = document.getElementById('note-popup');
+  const txt = document.getElementById('note-text').value.trim();
+  popup._incident.note=txt;
+  updateMarkerTooltip(popup._marker, popup._incident);
+  saveToStorage(); renderIncidentList();
+  closeNotePopup();
+}
+
+// ============================================================
+// INCIDENT LOG PANEL
+// ============================================================
+function togglePanel(){
+  panelOpen=!panelOpen;
+  document.getElementById('side-panel').classList.toggle('open', panelOpen);
+}
+
+function updatePanelFilter(){
+  const sel = document.getElementById('panel-filter-select');
+  const current = sel.value;
+  sel.innerHTML='<option value="">All Categories</option>';
+  categories.forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value=c.id; opt.textContent=c.name;
+    if(c.id===current) opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+
+function renderIncidentList(){
+  const list = document.getElementById('incident-list');
+  const filter = document.getElementById('panel-filter-select').value;
+  const sorted = [...incidents].reverse();
+  const filtered = filter ? sorted.filter(i=>i.catId===filter) : sorted;
+  list.innerHTML='';
+  if(!filtered.length){
+    list.innerHTML='<div style="padding:14px;font-size:11px;color:#4a6080;text-align:center">No incidents logged</div>';
+    return;
+  }
+  filtered.forEach(inc=>{
+    const cat = categories.find(c=>c.id===inc.catId)||{name:inc.catId,color:'#888'};
+    const dt = new Date(inc.timestamp);
+    const row = document.createElement('div');
+    row.className='incident-row';
+    row.innerHTML=`
+      <div class="ir-dot" style="background:${cat.color}"></div>
+      <div class="ir-info">
+        <div class="ir-cat" style="color:${cat.color}">${cat.name}</div>
+        <div class="ir-meta">${inc.state} · ${dt.toLocaleDateString()} ${dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+        ${inc.note?`<div class="ir-note">${inc.note}</div>`:''}
+      </div>`;
+    row.onclick=()=>{
+      map.setView([inc.lat,inc.lng],8,{animate:true});
+      if(inc._marker){
+        if(highlightedMarker) highlightedMarker.getElement()?.classList.remove('highlighted-marker');
+        inc._marker.getElement()?.classList.add('highlighted-marker');
+        highlightedMarker=inc._marker;
+      }
+    };
+    list.appendChild(row);
+  });
+}
+
+// ============================================================
+// CSV EXPORT
+// ============================================================
+function exportCSV(){
+  const header='ID,Category,State,Latitude,Longitude,Timestamp,Note\n';
+  const rows = incidents.map(i=>{
+    const cat = categories.find(c=>c.id===i.catId)||{name:i.catId};
+    return `${i.id},"${cat.name}","${i.state}",${i.lat.toFixed(5)},${i.lng.toFixed(5)},"${i.timestamp}","${(i.note||'').replace(/"/g,'""')}"`;
+  }).join('\n');
+  const blob = new Blob([header+rows],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='nigeria_incidents.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function exportSVG(){
+  // Get current map bounds
+  const bounds = map.getBounds();
+  const size = map.getSize();
+  
+  // Create SVG container
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", size.x);
+  svg.setAttribute("height", size.y);
+  svg.setAttribute("viewBox", `0 0 ${size.x} ${size.y}`);
+  svg.setAttribute("xmlns", svgNS);
+  
+  // Add background
+  const bg = document.createElementNS(svgNS, "rect");
+  bg.setAttribute("width", size.x);
+  bg.setAttribute("height", size.y);
+  bg.setAttribute("fill", "#c8dce8");
+  svg.appendChild(bg);
+  
+  // Add state boundaries and labels
+  if(stateData && stateData.features){
+    stateData.features.forEach(feature => {
+      const coords = feature.geometry.coordinates;
+      const name = feature.properties.shapeName || 'Unknown';
+      const displayName = name === 'Abuja Federal Capital Territory' ? 'F.C.T.' : name;
+      
+      const path = document.createElementNS(svgNS, "path");
+      let pathData = "";
+      
+      const processCoords = (coordArray) => {
+        coordArray.forEach(ring => {
+          ring.forEach((coord, i) => {
+            const point = map.latLngToContainerPoint([coord[1], coord[0]]);
+            if(i === 0){
+              pathData += `M ${point.x} ${point.y}`;
+            } else {
+              pathData += ` L ${point.x} ${point.y}`;
+            }
+          });
+          pathData += " Z";
+        });
+      };
+      
+      if(feature.geometry.type === 'Polygon'){
+        processCoords(coords);
+      } else if(feature.geometry.type === 'MultiPolygon'){
+        coords.forEach(polygon => processCoords(polygon));
+      }
+      
+      path.setAttribute("d", pathData);
+      path.setAttribute("fill", "#f5e6c8");
+      path.setAttribute("stroke", "#8a7a60");
+      path.setAttribute("stroke-width", "1");
+      svg.appendChild(path);
+      
+      // Add state label
+      try {
+        const center = map.latLngToContainerPoint(L.geoJSON(feature).getBounds().getCenter());
+        const text = document.createElementNS(svgNS, "text");
+        text.setAttribute("x", center.x);
+        text.setAttribute("y", center.y);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("font-family", "Barlow Condensed, sans-serif");
+        text.setAttribute("font-size", "8");
+        text.setAttribute("font-weight", "600");
+        text.setAttribute("fill", "#5a4a2a");
+        text.setAttribute("text-transform", "uppercase");
+        text.textContent = displayName;
+        svg.appendChild(text);
+      } catch(e) {}
+    });
+  }
+  
+  // Add incident markers
+  incidents.forEach(incident => {
+    const cat = categories.find(c => c.id === incident.catId);
+    if(!cat) return;
+    
+    const point = map.latLngToContainerPoint([incident.lat, incident.lng]);
+    const circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("cx", point.x);
+    circle.setAttribute("cy", point.y);
+    circle.setAttribute("r", "6");
+    circle.setAttribute("fill", cat.color);
+    circle.setAttribute("stroke", "#fff");
+    circle.setAttribute("stroke-width", "1");
+    svg.appendChild(circle);
+  });
+  
+  // Add ENI sites with text label
+  ENI_SITES.forEach(site => {
+    const point = map.latLngToContainerPoint([site.lat, site.lng]);
+    
+    // Add ENI text as icon replacement
+    const text = document.createElementNS(svgNS, "text");
+    text.setAttribute("x", point.x);
+    text.setAttribute("y", point.y);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "middle");
+    text.setAttribute("font-family", "Arial, sans-serif");
+    text.setAttribute("font-size", "10");
+    text.setAttribute("font-weight", "bold");
+    text.setAttribute("fill", "#f5a623");
+    text.textContent = "ENI";
+    svg.appendChild(text);
+    
+    // Add small background rectangle
+    const bbox = text.getBBox ? text.getBBox() : { width: 20, height: 8 };
+    const rect = document.createElementNS(svgNS, "rect");
+    rect.setAttribute("x", point.x - bbox.width/2 - 2);
+    rect.setAttribute("y", point.y - bbox.height/2 - 1);
+    rect.setAttribute("width", bbox.width + 4);
+    rect.setAttribute("height", bbox.height + 2);
+    rect.setAttribute("fill", "#fff");
+    rect.setAttribute("stroke", "#f5a623");
+    rect.setAttribute("stroke-width", "1");
+    rect.setAttribute("rx", "2");
+    svg.insertBefore(rect, text);
+  });
+  
+  // Add legend at bottom with padding
+  const legendHeight = 50;
+  const legendY = size.y - legendHeight - 10;
+  let legendX = 20;
+  
+  // Legend background
+  const legendBg = document.createElementNS(svgNS, "rect");
+  legendBg.setAttribute("x", 10);
+  legendBg.setAttribute("y", legendY - 10);
+  legendBg.setAttribute("width", size.x - 20);
+  legendBg.setAttribute("height", 45);
+  legendBg.setAttribute("fill", "#0d1b2e");
+  legendBg.setAttribute("stroke", "#1a3052");
+  legendBg.setAttribute("stroke-width", "2");
+  svg.appendChild(legendBg);
+  
+  // Legend title
+  const legendTitle = document.createElementNS(svgNS, "text");
+  legendTitle.setAttribute("x", legendX);
+  legendTitle.setAttribute("y", legendY + 15);
+  legendTitle.setAttribute("font-family", "Barlow Condensed, sans-serif");
+  legendTitle.setAttribute("font-size", "12");
+  legendTitle.setAttribute("font-weight", "700");
+  legendTitle.setAttribute("fill", "#fff");
+  legendTitle.setAttribute("text-transform", "uppercase");
+  legendTitle.setAttribute("letter-spacing", "1.5px");
+  legendTitle.textContent = "Map Legend:";
+  svg.appendChild(legendTitle);
+  
+  legendX += 100;
+  
+  // Legend items
+  categories.forEach(cat => {
+    // Icon/color swatch
+    if(cat.id === 'eni'){
+      // ENI text
+      const eniText = document.createElementNS(svgNS, "text");
+      eniText.setAttribute("x", legendX);
+      eniText.setAttribute("y", legendY + 15);
+      eniText.setAttribute("font-family", "Arial, sans-serif");
+      eniText.setAttribute("font-size", "10");
+      eniText.setAttribute("font-weight", "bold");
+      eniText.setAttribute("fill", "#f5a623");
+      eniText.textContent = "ENI";
+      svg.appendChild(eniText);
+      
+      // White background for ENI
+      const eniBg = document.createElementNS(svgNS, "rect");
+      eniBg.setAttribute("x", legendX - 8);
+      eniBg.setAttribute("y", legendY + 7);
+      eniBg.setAttribute("width", 16);
+      eniBg.setAttribute("height", 12);
+      eniBg.setAttribute("fill", "#fff");
+      eniBg.setAttribute("stroke", "#f5a623");
+      eniBg.setAttribute("stroke-width", "1");
+      eniBg.setAttribute("rx", "2");
+      svg.insertBefore(eniBg, eniText);
+      
+      legendX += 35;
+    } else {
+      // Color circle
+      const circle = document.createElementNS(svgNS, "circle");
+      circle.setAttribute("cx", legendX + 7);
+      circle.setAttribute("cy", legendY + 13);
+      circle.setAttribute("r", "5");
+      circle.setAttribute("fill", cat.color);
+      svg.appendChild(circle);
+      
+      legendX += 20;
+    }
+    
+    // Category name
+    const label = document.createElementNS(svgNS, "text");
+    label.setAttribute("x", legendX);
+    label.setAttribute("y", legendY + 15);
+    label.setAttribute("font-family", "Barlow Condensed, sans-serif");
+    label.setAttribute("font-size", "10");
+    label.setAttribute("font-weight", "600");
+    label.setAttribute("fill", "#8a9bb5");
+    label.setAttribute("text-transform", "uppercase");
+    label.setAttribute("letter-spacing", "0.8px");
+    label.textContent = cat.name;
+    svg.appendChild(label);
+    
+    legendX += cat.name.length * 6 + 25;
+    
+    // Add separator
+    const sep = document.createElementNS(svgNS, "rect");
+    sep.setAttribute("x", legendX - 10);
+    sep.setAttribute("y", legendY + 5);
+    sep.setAttribute("width", "1");
+    sep.setAttribute("height", "20");
+    sep.setAttribute("fill", "#1a3052");
+    svg.appendChild(sep);
+    
+    legendX += 15;
+  });
+  
+  // Serialize and download
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const blob = new Blob([svgData], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nigeria_map.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAllIncidents(){
+  if(incidents.length === 0){
+    alert('No incidents to clear');
+    return;
+  }
+  if(confirm(`Remove all ${incidents.length} incident markers from the map? This cannot be undone.`)){
+    // Remove all incident markers from map
+    incidents.forEach(inc => {
+      if(inc._marker){
+        incidentLayerGroup.removeLayer(inc._marker);
+      }
+    });
+    // Clear incidents array
+    incidents = [];
+    // Save to storage
+    saveToStorage();
+    // Update UI
+    renderIncidentList();
+    updatePanelFilter();
+  }
+}
+
+// ============================================================
+// LOCAL STORAGE
+// ============================================================
+function saveToStorage(){
+  const data = {
+    categories: categories.map(c=>({id:c.id,name:c.name,color:c.color,icon:c.icon,locked:c.locked})),
+    incidents: incidents.map(i=>({id:i.id,catId:i.catId,lat:i.lat,lng:i.lng,state:i.state,timestamp:i.timestamp,note:i.note}))
+  };
+  try{localStorage.setItem('nigeria_map_v2', JSON.stringify(data));}catch(e){}
+}
+
+function loadFromStorage(){
+  try{
+    const raw = localStorage.getItem('nigeria_map_v2');
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(data.categories && data.categories.length){
+      // Merge: update existing, add new custom
+      data.categories.forEach(saved=>{
+        const existing = categories.find(c=>c.id===saved.id);
+        if(existing){
+          existing.name=saved.name;
+          if(!existing.locked) existing.color=saved.color;
+          existing.icon=saved.icon;
+        } else {
+          categories.push(saved);
+        }
+      });
+    }
+    if(data.incidents){
+      incidents=[];
+      data.incidents.forEach(inc=>{
+        const m = createIncidentMarker(inc);
+        incidents.push({...inc,_marker:m});
+      });
+    }
+    renderLegend(); renderToolbar(); renderIncidentList(); updatePanelFilter();
+  }catch(e){console.warn('Storage load failed',e);}
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderLegend();
+  renderToolbar();
+  updatePanelFilter();
+  initMap();
+  // Default mode-none highlighted
+  document.getElementById('mode-none').classList.add('active');
+});
+</script>
+</body>
+</html>
