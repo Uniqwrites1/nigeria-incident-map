@@ -1,0 +1,13 @@
+{
+  "name": "nigeria-incident-map",
+  "version": "1.0.0",
+  "description": "Nigeria Incident Map - ENI Operational Intelligence",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build needed - static HTML'",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": ["nigeria", "map", "incident", "eni", "intelligence"],
+  "author": "ENI/NAOC",
+  "license": "MIT"
+}

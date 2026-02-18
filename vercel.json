@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "name": "nigeria-incident-map",
+  "builds": [
+    {
+      "src": "nigeria_map copy.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/nigeria_map copy.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000"
+        }
+      ]
+    }
+  ]
+}
